@@ -58,3 +58,11 @@ func TestGetChanges(t *testing.T) {
 		t.Errorf("Did not find the changes")
 	}
 }
+
+func TestGetPullRequests(t *testing.T) {
+	ops := getOps()
+	prs, _ := ops.GetPullRequests("competency-core")
+	if len(prs) == 0 {
+		t.Errorf("Did not find the pull requests")
+	}
+}

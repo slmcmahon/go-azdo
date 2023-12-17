@@ -64,7 +64,7 @@ func azureDevOpsGetRequest(pat, url string, response AzureDevOpsAPIResponse) err
 
 func (ops *AZDOOperations) GetRepositories() ([]Repository, error) {
 	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories", ops.Organization, ops.Project)
-	var response RepoListResponse
+	var response AZDOResponse[Repository]
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
 	return response.Value, err
 }
@@ -78,7 +78,7 @@ func (ops *AZDOOperations) GetRepository(repository string) (Repository, error) 
 
 func (ops *AZDOOperations) GetCommits(repository string) ([]Commit, error) {
 	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/commits", ops.Organization, ops.Project, repository)
-	var response CommitListResponse
+	var response AZDOResponse[Commit]
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
 	return response.Value, err
 }
@@ -97,6 +97,13 @@ func (ops *AZDOOperations) GetChanges(repository string, commit string) ([]Chang
 	return response.Value, err
 }
 
+func (ops *AZDOOperations) GetPullRequests(repository string) ([]PullRequest, error) {
+	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/pullrequests", ops.Organization, ops.Project, repository)
+	var response AZDOResponse[PullRequest]
+	err := azureDevOpsGetRequest(ops.PAT, url, &response)
+	return response.Value, err
+}
+
 func (ops *AZDOOperations) GetVariableLibraries(ids ...int) ([]VarLib, error) {
 	var sbUrl strings.Builder
 	sbUrl.WriteString(fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/distributedTask/variableGroups", ops.Organization, ops.Project))
@@ -109,7 +116,7 @@ func (ops *AZDOOperations) GetVariableLibraries(ids ...int) ([]VarLib, error) {
 	}
 	url := sbUrl.String()
 
-	var response VarLibResponse
+	var response AZDOResponse[VarLib]
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
 	return response.Value, err
 }
