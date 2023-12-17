@@ -9,92 +9,6 @@ import (
 	"strings"
 )
 
-type AZDOOperations struct {
-	PAT          string
-	Organization string
-	Project      string
-}
-
-type VarLibResponse struct {
-	Count int64    `json:"count"`
-	Value []VarLib `json:"value"`
-}
-
-type RepoListResponse struct {
-	Count int64        `json:"count"`
-	Value []Repository `json:"value"`
-}
-
-type VarLib struct {
-	Variables                      map[string]Variable `json:"variables"`
-	ID                             int64               `json:"id"`
-	Type                           string              `json:"type"`
-	Name                           string              `json:"name"`
-	Description                    string              `json:"description"`
-	CreatedBy                      Person              `json:"createdBy"`
-	CreatedOn                      string              `json:"createdOn"`
-	ModifiedBy                     Person              `json:"modifiedBy"`
-	ModifiedOn                     string              `json:"modifiedOn"`
-	IsShared                       bool                `json:"isShared"`
-	VariableGroupProjectReferences interface{}         `json:"variableGroupProjectReferences"`
-}
-
-type Person struct {
-	DisplayName string `json:"displayName"`
-	ID          string `json:"id"`
-	UniqueName  string `json:"uniqueName"`
-}
-
-type Variable struct {
-	Value string `json:"value"`
-}
-
-type Repository struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	URL             string `json:"url"`
-	DefaultBranch   string `json:"defaultBranch"`
-	Size            int64  `json:"size"`
-	RemoteURL       string `json:"remoteUrl"`
-	SSHURL          string `json:"sshUrl"`
-	WebURL          string `json:"webUrl"`
-	IsDisabled      bool   `json:"isDisabled"`
-	IsInMaintenance bool   `json:"isInMaintenance"`
-}
-
-type ChangeCounts struct {
-	Add    int64 `json:"Add"`
-	Edit   int64 `json:"Edit"`
-	Delete int64 `json:"Delete"`
-}
-
-type Commit struct {
-	CommitID     string       `json:"commitId"`
-	Author       Person       `json:"author"`
-	Committer    Person       `json:"committer"`
-	Comment      string       `json:"comment"`
-	ChangeCounts ChangeCounts `json:"changeCounts"`
-	URL          string       `json:"url"`
-	RemoteURL    string       `json:"remoteUrl"`
-}
-
-type Change struct {
-	Item       ChangeItem `json:"item"`
-	ChangeType string     `json:"changeType"`
-}
-
-type ChangeItem struct {
-	ObjectID         string `json:"objectId"`
-	OriginalObjectID string `json:"originalObjectId"`
-	GitObjectType    string `json:"gitObjectType"`
-	CommitID         string `json:"commitId"`
-	Path             string `json:"path"`
-	URL              string `json:"url"`
-}
-
-// AzureDevOpsAPIResponse is an interface that different Azure DevOps response types can implement.
-type AzureDevOpsAPIResponse interface{}
-
 func NewAZDOOperations(pat string, org string, project string) *AZDOOperations {
 	return &AZDOOperations{
 		PAT:          pat,
@@ -148,21 +62,42 @@ func azureDevOpsGetRequest(pat, url string, response AzureDevOpsAPIResponse) err
 	return nil
 }
 
-func (ops *AZDOOperations) GetRepositories() (RepoListResponse, error) {
+func (ops *AZDOOperations) GetRepositories() ([]Repository, error) {
 	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories", ops.Organization, ops.Project)
 	var response RepoListResponse
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
-	return response, err
+	return response.Value, err
 }
 
-func (ops *AZDOOperations) GetRepository(repsitory string) (Repository, error) {
-	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s", ops.Organization, ops.Project, repsitory)
+func (ops *AZDOOperations) GetRepository(repository string) (Repository, error) {
+	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s", ops.Organization, ops.Project, repository)
 	var response Repository
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
 	return response, err
 }
 
-func (ops *AZDOOperations) GetVariableLibraries(ids ...int) (VarLibResponse, error) {
+func (ops *AZDOOperations) GetCommits(repository string) ([]Commit, error) {
+	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/commits", ops.Organization, ops.Project, repository)
+	var response CommitListResponse
+	err := azureDevOpsGetRequest(ops.PAT, url, &response)
+	return response.Value, err
+}
+
+func (ops *AZDOOperations) GetCommit(repository string, commitId string) (Commit, error) {
+	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/commits/%s", ops.Organization, ops.Project, repository, commitId)
+	var response Commit
+	err := azureDevOpsGetRequest(ops.PAT, url, &response)
+	return response, err
+}
+
+func (ops *AZDOOperations) GetChanges(repository string, commit string) ([]Change, error) {
+	url := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/commits/%s/changes", ops.Organization, ops.Project, repository, commit)
+	var response ChangeListResponse
+	err := azureDevOpsGetRequest(ops.PAT, url, &response)
+	return response.Value, err
+}
+
+func (ops *AZDOOperations) GetVariableLibraries(ids ...int) ([]VarLib, error) {
 	var sbUrl strings.Builder
 	sbUrl.WriteString(fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/distributedTask/variableGroups", ops.Organization, ops.Project))
 	if len(ids) != 0 {
@@ -176,5 +111,5 @@ func (ops *AZDOOperations) GetVariableLibraries(ids ...int) (VarLibResponse, err
 
 	var response VarLibResponse
 	err := azureDevOpsGetRequest(ops.PAT, url, &response)
-	return response, err
+	return response.Value, err
 }
